@@ -60,21 +60,22 @@ powershell -ExecutionPolicy Bypass -File tools\car_thing.ps1 -Serial 8558R685Q81
 
 ### Start automatically
 
-The device side is already automatic: the kiosk's start page redirects to the
-client, so turning the Car Thing on lands on DeskGadget.
+The device side is automatic: the kiosk's start page redirects to the client,
+so turning the Car Thing on lands on DeskGadget. Verified across a cold boot.
 
-The USB tunnel is the part that has to be rebuilt on the PC after every reboot
-or replug, because `adb reverse` belongs to the connection, not the device:
+The tunnel is the PC half. `adb reverse` belongs to the adb session, and the
+adb server keeps it across device reboots and replugs — so while the PC stays
+on, starting the Car Thing is enough. After a PC reboot, restore it once:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\install_autostart.ps1
 ```
 
-That registers a per-user task at logon which watches for the Car Thing and
-restores the tunnel. It checks `adb reverse --list` first, backs off a minute
-after a failure, and stops for a replug after three — this firmware's adbd
-sometimes answers with `protocol fault` and drops the USB link, so it must not
-retry hard.
+That registers a per-user task at logon which waits for the device and makes a
+**single** `adb reverse` attempt. It is deliberately not a watcher: this
+firmware's adbd can answer with `protocol fault` and drop the whole USB link,
+so retrying is what breaks it. One attempt per logon is safe; the log is at
+`%LOCALAPPDATA%\DeskGadget\carthing-tunnel.log`.
 
 ### Manual
 
