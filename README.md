@@ -1,0 +1,124 @@
+# DeskGadget for Car Thing
+
+The **System** and **Media** modules of [DeskGadget](https://github.com/issacjohn/deskgadget)
+on a Spotify Car Thing, as one static page. No APK, no Android, no build step.
+
+![System](docs/system.png)
+
+![Media](docs/media.png)
+
+## What it is
+
+The Car Thing runs Linux on an Amlogic S905D2 with ~488 MB of RAM. It can't run
+the Android app, but its Chromium kiosk can run a web client that speaks the
+same WebSocket protocol (`/ws`) the phone uses.
+
+This repo is that client, deliberately small: one HTML file, one stylesheet,
+one script, flat colours, no blur, no animation loop, one canvas redraw per
+data change. Memory matters here — the stock firmware ships `earlyoom`
+configured to kill anything matching `chrome` the moment RAM runs low, which is
+why heavier pages make the device appear to restart.
+
+It shows only:
+
+| Module | Contents |
+|---|---|
+| **System** | CPU utilization + package temperature + 60 s history, memory/disk capacity, GPU core temperature with hot spot and memory junction, download/upload/ping, LAN/public IP, and the PC actions (lock, screen off, desktop, capture) |
+| **Media** | now playing (title, artist, source, seek), transport (mute, previous, play/pause, next), PC volume slider, output devices |
+
+Camera, AudioMesh, Windows, News, Weather and the mouse/keyboard pad are not
+part of this client.
+
+## Requirements
+
+- DeskGadget **1.3.11 or newer** running on a Windows PC
+- A Car Thing with the DeskThing client (or any Chromium kiosk) and adb access
+- The USB cable the device came with
+
+No Wi-Fi is needed: the client reaches the PC through `adb reverse`.
+
+## Install (Windows)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\car_thing.ps1
+```
+
+The script:
+
+1. runs `adb reverse tcp:8787 tcp:8787`, so `127.0.0.1:8787` on the Car Thing
+   is the DeskGadget server on the PC;
+2. pushes `index.html`, `style.css` and `app.js` to `/tmp/deskgadget`;
+3. points the running kiosk at `file:///tmp/deskgadget/index.html` through the
+   Chromium DevTools port that DeskThing leaves open.
+
+With more than one adb device connected, pass the serial:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\car_thing.ps1 -Serial 8558R685Q811
+```
+
+`/tmp` lives in RAM, so a reboot brings DeskThing back and the files vanish.
+Run the script again after a reboot.
+
+### Manual
+
+```sh
+adb reverse tcp:8787 tcp:8787
+adb shell mkdir -p /tmp/deskgadget
+adb push index.html style.css app.js /tmp/deskgadget/
+adb forward tcp:2222 tcp:2222
+```
+
+Then navigate the kiosk to `file:///tmp/deskgadget/index.html` (DevTools on
+`http://127.0.0.1:2222`), or open that URL in any browser on the device.
+
+## Preview on a PC
+
+```sh
+python -m http.server 8099
+```
+
+Open <http://127.0.0.1:8099/?view=system> or `?view=media`. The page connects to
+`ws://127.0.0.1:8787/ws`; point it elsewhere with `?host=192.168.0.10&port=8787`.
+
+## How it connects
+
+The client sends the normal DeskGadget hello:
+
+```json
+{"v":1,"type":"hello","device_id":"carthing-xxxxxxxx","device":{"name":"Car Thing","model":"Car Thing"}}
+```
+
+The server answers with a welcome containing the pages, then pushes
+`{"type":"page","module":"system"|"media",...}` whenever something changes.
+Actions go back the same way as the phone:
+
+```json
+{"v":1,"type":"action","module":"media","action":"set_volume","payload":{"value":40}}
+```
+
+The device shows up in the DeskGadget dashboard as **Car Thing**. If System or
+Media is disabled for it there, the page stays empty — enable both.
+
+## Design notes
+
+- **800×480, dpr 1.** Two zones: a 74 px rail and a 2×2 grid (System) or a
+  two-column player (Media).
+- **Cheap by construction.** No `backdrop-filter`, no gradients beyond two
+  static ones, no `requestAnimationFrame`, no images. Text nodes are updated in
+  place and only when the value changed.
+- **Safe for Chrome 69.** The kiosk is Chromium 69: no flex `gap`, no optional
+  chaining, no `inset`, no multi-position colour stops.
+- **Touch first.** Every control is at least 44 px tall; the volume slider has a
+  26 px thumb.
+
+## Credits
+
+- [DeskGadget](https://github.com/issacjohn/deskgadget) — the server and protocol
+- [DeskThing](https://github.com/ItsRiprod/DeskThing) — the Car Thing client this
+  runs beside; not affiliated
+- Spotify Car Thing — the hardware, unsupported by Spotify since 2024
+
+## License
+
+MIT © 2026 Isaac John

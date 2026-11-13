@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="theme-color" content="#070A0F">
+<title>DeskGadget · Car Thing</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav id="rail" aria-label="Modules">
+  <button class="rail-btn is-on" data-view="system" type="button">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg>
+    <span>System</span>
+  </button>
+  <button class="rail-btn" data-view="media" type="button">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="3"/><circle cx="16.5" cy="16" r="3"/></svg>
+    <span>Media</span>
+  </button>
+</nav>
+
+<header id="top">
+  <span id="conn" class="dot" title="server"></span>
+  <span id="server">DeskGadget</span>
+  <span id="clock">--:--</span>
+</header>
+
+<main>
+  <section id="view-system" class="view is-on">
+    <div class="system-grid">
+      <article class="card cpu">
+        <div class="head"><span>CPU</span><span id="cpu-threads" class="sub">—</span></div>
+        <div class="cpu-row">
+          <div class="stat"><span class="k">UTILIZATION</span><b id="cpu-util">—</b></div>
+          <div class="stat"><span class="k">THERMAL</span><b id="cpu-temp">—</b></div>
+        </div>
+        <canvas id="cpu-graph" width="640" height="128"></canvas>
+      </article>
+
+      <article class="card gpu">
+        <div class="head"><span>GPU</span><span class="sub">THERMAL</span></div>
+        <div class="gpu-row">
+          <b id="gpu-temp">—</b>
+          <span id="gpu-name" class="sub">—</span>
+        </div>
+        <div class="band"><i id="gpu-marker"></i></div>
+        <div class="net" id="net"></div>
+      </article>
+
+      <article class="card capacity">
+        <div class="head"><span>CAPACITY</span><span id="power" class="sub">—</span></div>
+        <div id="cap-list"></div>
+      </article>
+
+      <article class="card actions">
+        <div class="head"><span>PC</span><span id="uptime" class="sub">—</span></div>
+        <div class="pc-info">
+          <span>LAN <b id="lan">—</b></span>
+          <span>PUBLIC <b id="pub">—</b></span>
+        </div>
+        <div class="action-row" id="actions"></div>
+      </article>
+    </div>
+  </section>
+
+  <section id="view-media" class="view">
+    <div class="media-grid">
+      <article class="card now">
+        <div class="head"><span>NOW PLAYING</span><span id="m-source" class="sub">—</span></div>
+        <div class="now-body">
+          <div class="now-text">
+            <b id="m-title">Nothing playing</b>
+            <span id="m-artist" class="sub">Start something on the PC</span>
+          </div>
+          <div class="now-foot">
+          <div class="seek" id="m-seek">
+            <div class="seek-track"><i id="m-fill"></i></div>
+            <div class="seek-times"><span id="m-pos">0:00</span><span id="m-dur">0:00</span></div>
+          </div>
+          <div class="transport">
+            <button type="button" class="tbtn" data-action="toggle_mute" aria-label="Mute">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg>
+            </button>
+            <button type="button" class="tbtn" data-action="prev" aria-label="Previous">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6v12L9 12z"/><rect x="5" y="6" width="2" height="12" rx="1"/></svg>
+            </button>
+            <button type="button" class="tbtn primary" data-action="play_pause" aria-label="Play or pause">
+              <svg id="m-play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg>
+            </button>
+            <button type="button" class="tbtn" data-action="next" aria-label="Next">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6v12l9-6z"/><rect x="17" y="6" width="2" height="12" rx="1"/></svg>
+            </button>
+          </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card volume">
+        <div class="head"><span>PC VOLUME</span><span class="sub">DESKTOP</span></div>
+        <div class="vol-big" id="vol-val">—</div>
+        <input id="vol" type="range" min="0" max="100" step="1" value="0" aria-label="PC volume">
+      </article>
+
+      <article class="card endpoints">
+        <div class="head"><span>OUTPUTS</span><span class="sub">tap to mute</span></div>
+        <div class="chips" id="outputs"></div>
+      </article>
+    </div>
+  </section>
+</main>
+
+<div id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
