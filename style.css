@@ -663,7 +663,7 @@ main { grid-area: main; padding: 10px 12px 12px; min-height: 0; }
 /* volume change popup */
 #vol-pop {
   position: fixed;
-  top: 52px;
+  top: 5px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;

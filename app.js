@@ -487,14 +487,27 @@
     // control it even though its own page has no volume block
     var volumePage = pages.media || page;
     var hero = block(volumePage, 'hero');
+    var level = null;
+    var muted = false;
+
     if (hero && hero.slider) {
-      var shown = Math.round(hero.slider.value || 0);
-      var muted = hero.value === 'MUTED';
-      if (!dragging) paintVolume(shown, muted);
-      if (lastVolume !== null && (shown !== lastVolume || muted !== lastMuted)) {
-        volumePopup(shown, shown > lastVolume, muted);
+      level = Math.round(hero.slider.value || 0);
+      muted = hero.value === 'MUTED';
+    } else {
+      // the car module carries the level on its transport block
+      var transport = block(page, 'controls');
+      if (transport && typeof transport.volume === 'number') {
+        level = transport.volume;
+        muted = !!transport.muted;
       }
-      lastVolume = shown;
+    }
+
+    if (level !== null) {
+      if (!dragging) paintVolume(level, muted);
+      if (lastVolume !== null && (level !== lastVolume || muted !== lastMuted)) {
+        volumePopup(level, level > lastVolume, muted);
+      }
+      lastVolume = level;
       lastMuted = muted;
     }
 
