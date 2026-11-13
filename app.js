@@ -13,7 +13,11 @@
   var HOST = params.get('host') ||
     (location.protocol === 'http:' ? location.hostname : '127.0.0.1');
   var PORT = params.get('port') || '8787';
-  var DEVICE_ID = localStorage.getItem('dg_carthing_id');
+  var DEVICE_ID = localStorage.getItem('dg_carthing_id') || 'carthing';
+  if (params.get('id')) {
+    DEVICE_ID = params.get('id');
+    localStorage.setItem('dg_carthing_id', DEVICE_ID);
+  }
   if (!DEVICE_ID) {
     DEVICE_ID = 'carthing-' + Math.random().toString(36).slice(2, 10);
     localStorage.setItem('dg_carthing_id', DEVICE_ID);
@@ -39,6 +43,8 @@
   var otherKey = '';
   var playState = null;
   var lastArt = '';
+  var newsKey = '';
+  var wxKey = '';
   var outputsKey = '';
   var capRows = [];
   var netCells = null;
@@ -140,6 +146,8 @@
       pages[msg.module] = msg.page;
       if (msg.module === 'system') renderSystem();
       else if (msg.module === 'media' || msg.module === 'media_carthing') renderMedia();
+      else if (msg.module === 'news') renderNews();
+      else if (msg.module === 'weather') renderWeather();
       else if (msg.module === current) renderOther(current, true);
     } else if (msg.type === 'toast') {
       toast(msg.text);
@@ -174,6 +182,8 @@
   function renderAll() {
     renderSystem();
     renderMedia();
+    renderNews();
+    renderWeather();
     if (current !== 'system' && current !== 'media') renderOther(current, true);
   }
 
@@ -227,17 +237,24 @@
     document.body.setAttribute('data-view', id);
     el.rail.setAttribute('data-view', id);
 
-    var isSystem = id === 'system';
-    var isMedia = id === 'media' || id === 'media_carthing';
-    el.viewSystem.className = 'view' + (isSystem ? ' is-on' : '');
-    el.viewMedia.className = 'view' + (isMedia ? ' is-on' : '');
-    el.viewOther.className = 'view' + (!isSystem && !isMedia ? ' is-on' : '');
+    var sections = {
+      system: el.viewSystem,
+      media: el.viewMedia,
+      media_carthing: el.viewMedia,
+      news: el.viewNews,
+      weather: el.viewWeather
+    };
+    var target = sections[id] || el.viewOther;
+    [el.viewSystem, el.viewMedia, el.viewNews, el.viewWeather, el.viewOther].forEach(function (node) {
+      node.className = 'view' + (node === target ? ' is-on' : '');
+    });
 
     Array.prototype.forEach.call(el.rail.children, function (button) {
       button.classList.toggle('is-on', button.getAttribute('data-module') === id);
     });
 
-    if (!isSystem && !isMedia) renderOther(id, true);
+    if (target === el.viewMedia) renderMedia();
+    if (!sections[id]) renderOther(id, true);
   }
 
   function stepView(delta) {
@@ -575,6 +592,76 @@
 
   /* ---------------------------- other modules ------------------------- */
 
+  function renderNews() {
+    var page = pages.news;
+    if (!page) return;
+    var item = block(page, 'news');
+    if (!item) return;
+    var key = JSON.stringify(item);
+    if (key === newsKey) return;
+    newsKey = key;
+
+    setText(el.newsTopic, item.title || '');
+    el.newsList.textContent = '';
+    (item.items || []).slice(0, 4).forEach(function (entry) {
+      var row = h('div', 'news-item');
+      row.appendChild(h('b', null, entry.title || ''));
+      var meta = [entry.source, entry.ago].filter(Boolean).join('  \u00b7  ');
+      row.appendChild(h('span', null, meta));
+      row.setAttribute('data-act', entry.action || 'open');
+      if (entry.url) row.setAttribute('data-url', entry.url);
+      el.newsList.appendChild(row);
+    });
+  }
+
+  function renderWeather() {
+    var page = pages.weather;
+    if (!page) return;
+    var hero = block(page, 'hero');
+    var hours = block(page, 'hours');
+    var week = block(page, 'list');
+    var key = JSON.stringify([hero, hours, week]);
+    if (key === wxKey) return;
+    wxKey = key;
+
+    if (hero) {
+      setText(el.wxPlace, hero.label || '');
+      setText(el.wxValue, hero.value || '\u2014');
+      setText(el.wxUnit, hero.unit || '');
+      setText(el.wxSub, hero.sub || '');
+      el.wxStats.textContent = '';
+      (hero.stats || []).slice(0, 3).forEach(function (stat) {
+        var cell = h('div');
+        cell.appendChild(h('span', null, (stat.label || '').toUpperCase()));
+        cell.appendChild(h('b', null, stat.value));
+        el.wxStats.appendChild(cell);
+      });
+    }
+
+    if (hours) {
+      el.wxHours.textContent = '';
+      (hours.items || []).slice(0, 5).forEach(function (entry) {
+        var cell = h('div');
+        cell.appendChild(h('span', null, entry.label || entry.hour || ''));
+        cell.appendChild(h('b', null, entry.value || entry.temp || ''));
+        el.wxHours.appendChild(cell);
+      });
+    }
+
+    if (week) {
+      el.wxDays.textContent = '';
+      (week.items || []).slice(0, 4).forEach(function (entry) {
+        var row = h('div', 'wx-day');
+        var text = h('div');
+        text.appendChild(h('b', null, entry.title || ''));
+        if (entry.sub) text.appendChild(h('span', null, entry.sub));
+        row.appendChild(text);
+        row.appendChild(h('i', null, entry.value || ''));
+        el.wxDays.appendChild(row);
+      });
+    }
+  }
+
   function renderOther(id, force) {
     var page = pages[id];
     if (!page) return;
@@ -825,6 +912,17 @@
       viewSystem: $('view-system'),
       viewMedia: $('view-media'),
       viewOther: $('view-other'),
+      viewNews: $('view-news'),
+      viewWeather: $('view-weather'),
+      newsTopic: $('news-topic'),
+      newsList: $('news-list'),
+      wxPlace: $('wx-place'),
+      wxValue: $('wx-value'),
+      wxUnit: $('wx-unit'),
+      wxSub: $('wx-sub'),
+      wxStats: $('wx-stats'),
+      wxDays: $('wx-days'),
+      wxHours: $('wx-hours'),
       other: $('other-body'),
       conn: $('conn'),
       server: $('server'),
@@ -897,6 +995,18 @@
 
     el.volUp.addEventListener('click', function () { act('media', 'volume_up'); });
     el.volDown.addEventListener('click', function () { act('media', 'volume_down'); });
+
+    el.viewNews.addEventListener('click', function (event) {
+      var target = event.target;
+      while (target && target !== el.viewNews && !target.getAttribute('data-act')) {
+        target = target.parentNode;
+      }
+      if (!target || target === el.viewNews) return;
+      var payload = {};
+      var url = target.getAttribute('data-url');
+      if (url) payload.url = url;
+      act('news', target.getAttribute('data-act'), payload);
+    });
 
     el.other.addEventListener('click', function (event) {
       var target = event.target;

@@ -109,6 +109,32 @@
     </div>
   </section>
 
+  <section id="view-news" class="view">
+    <article class="card news-card">
+      <div class="head"><span>NEWS</span><span id="news-topic" class="sub"></span></div>
+      <div class="news-list" id="news-list"></div>
+    </article>
+  </section>
+
+  <section id="view-weather" class="view">
+    <div class="wx-grid">
+      <article class="card wx-now">
+        <div class="head"><span>NOW</span><span id="wx-place" class="sub"></span></div>
+        <div class="wx-temp"><b id="wx-value">—</b><i id="wx-unit"></i></div>
+        <div class="wx-sub" id="wx-sub"></div>
+        <div class="wx-stats" id="wx-stats"></div>
+      </article>
+      <article class="card wx-week">
+        <div class="head"><span>THIS WEEK</span><span class="sub">high / low</span></div>
+        <div class="wx-days" id="wx-days"></div>
+      </article>
+      <article class="card wx-hours-card">
+        <div class="head"><span>NEXT HOURS</span></div>
+        <div class="wx-hours" id="wx-hours"></div>
+      </article>
+    </div>
+  </section>
+
   <section id="view-other" class="view">
     <div class="other" id="other-body"></div>
   </section>
@@ -116,8 +142,10 @@
 
 <div id="toast" hidden></div>
 <div id="vol-pop" hidden>
-  <span id="vol-pop-arrow">↑</span>
-  <b id="vol-pop-val">0%</b>
+  <div class="vol-pop-row">
+    <span id="vol-pop-arrow">↑</span>
+    <b id="vol-pop-val">0%</b>
+  </div>
   <i><s id="vol-pop-bar"></s></i>
 </div>
 <script src="app.js"></script>

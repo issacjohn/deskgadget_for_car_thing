@@ -59,6 +59,27 @@ With more than one adb device connected, pass the serial:
 powershell -ExecutionPolicy Bypass -File tools\car_thing.ps1 -Serial 8558R685Q811
 ```
 
+### Boot screen
+
+The kiosk's start page is a branded splash — the DeskGadget mark, wordmark and
+a progress line — that waits for `/var/deskgadget/index.html` to exist and then
+navigates. No DeskThing logo, no logs. Edit `tools/boot.html`; add `?stay` to
+the URL to preview it without redirecting.
+
+### Unneeded services
+
+The device ships services for Spotify's app that DeskGadget never uses. All of
+them are disabled (not deleted) and can be re-enabled the same way:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\car_thing.ps1 -DisableDeskThing   # superbird helper
+```
+
+`bluetoothd` and `swupdate` are switched off the same way, by setting
+`autostart=false` for their `[program:...]` blocks in `/etc/supervisord.conf`
+and stopping them. Keep `backlight`, `chromium` and `earlyoom`: the screen,
+the UI and the memory guard.
+
 ### Disable DeskThing
 
 DeskGadget only needs the kiosk; DeskThing's native helper
@@ -157,8 +178,12 @@ Media is disabled for it there, the page stays empty — enable both.
 
 ## Design notes
 
-- **800×480, dpr 1.** Two zones: a 74 px rail and a 2×2 grid (System) or a
-  two-column player (Media).
+- **800×480, dpr 1, arm's length.** An 88 px rail, 46 px header, 11 px as the
+  smallest label and numbers doing the talking: 34 px CPU, 52 px GPU, 66 px
+  weather, 46 px volume OSD. Touch targets are 48 px or more.
+- **News and Weather have their own layouts.** News is four headlines at 17 px
+  with even spacing; weather is now/week/hours in one grid instead of a long
+  stack.
 - **Cheap by construction.** No `backdrop-filter`, no gradients beyond two
   static ones, no `requestAnimationFrame`, no images. Text nodes are updated in
   place and only when the value changed.

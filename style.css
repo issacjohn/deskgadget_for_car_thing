@@ -737,3 +737,185 @@ main { grid-area: main; padding: 10px 12px 12px; min-height: 0; }
 #m-art.is-on { display: block; }
 
 #view-media.solo #m-art { width: 176px; height: 176px; flex-basis: 176px; }
+
+/* ===================== Car Thing scale (800x480) ===================== */
+/* Desktop-sized type was unreadable at arm's length in a car. Everything
+   below is the shipping scale: 11px is the floor, numbers carry the screen. */
+
+body { grid-template-columns: 88px 1fr; grid-template-rows: 46px 1fr; }
+
+#rail { padding: 10px 0; }
+.rail-btn { height: 92px; margin-bottom: 4px; font-size: 11.5px; letter-spacing: .3px; }
+.rail-btn svg { width: 28px; height: 28px; margin-bottom: 7px; }
+
+#top { padding: 0 16px; font-size: 13px; }
+#top .dot { width: 8px; height: 8px; margin-right: 10px; }
+
+main { padding: 12px 14px 14px; }
+
+.card { padding: 14px 16px; border-radius: 14px; }
+.head { font-size: 10px; letter-spacing: 1.8px; }
+.head .sub { font-size: 10.5px; }
+
+/* ---- system ---- */
+.stat .k, .cap-k { font-size: 10px; letter-spacing: 1.5px; margin-bottom: 3px; }
+.stat b { font-size: 34px; }
+#cpu-graph { height: 74px; }
+.gpu-row { margin-top: 8px; }
+#gpu-temp { font-size: 52px; }
+#gpu-name { font-size: 10.5px; }
+.band { height: 10px; margin: 10px 0 7px; }
+.band i { top: -4px; height: 18px; width: 5px; }
+.net span { font-size: 9.5px; }
+.net b { font-size: 16px; }
+
+.cap-top b { font-size: 22px; }
+.cap-track { height: 10px; margin-top: 6px; }
+.cap-note { font-size: 11.5px; margin-top: 5px; }
+.cap-row { margin-bottom: 12px; }
+
+.action-row { margin-top: 12px; }
+.action-row button { height: 60px; font-size: 11px; border-radius: 11px; }
+.action-row svg { width: 22px; height: 22px; margin-bottom: 5px; }
+.pc-info { margin-top: 12px; font-size: 9.5px; }
+.pc-info b { font-size: 14px; margin-top: 3px; }
+
+/* ---- media ---- */
+.now-text b { font-size: 33px; line-height: 1.12; max-height: 76px; }
+.now-text .sub { font-size: 15px; margin-top: 6px; }
+.now-head { padding-top: 2px; }
+#m-art { width: 190px; height: 190px; flex-basis: 190px; margin-right: 20px; border-radius: 12px; }
+#view-media.solo #m-art { width: 210px; height: 210px; flex-basis: 210px; }
+
+.seek { margin-top: 12px; }
+.seek-track { height: 8px; }
+.seek-times { font-size: 12px; margin-top: 6px; }
+
+.tbtn { width: 62px; height: 62px; margin: 0 9px; }
+.tbtn svg { width: 26px; height: 26px; }
+.tbtn.primary { width: 78px; height: 78px; }
+.tbtn.primary svg { width: 32px; height: 32px; }
+
+/* ---- news ---- */
+.news-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.news-list::-webkit-scrollbar { display: none; }
+
+.news-item {
+  display: flex;
+  flex-direction: column;
+  padding: 11px 2px 12px;
+  border-bottom: 1px solid #151c26;
+  cursor: pointer;
+}
+.news-item:last-child { border-bottom: 0; }
+.news-item b {
+  font-size: 16.5px;
+  line-height: 1.28;
+  font-weight: 500;
+  max-height: 44px;
+  overflow: hidden;
+}
+.news-item span { font-size: 11.5px; color: var(--faint); margin-top: 4px; }
+
+/* ---- weather ---- */
+.wx-grid {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1.02fr .98fr;
+  grid-template-rows: 1fr 132px;
+  grid-template-areas: "now week" "hours hours";
+  gap: 12px;
+}
+
+.wx-now { grid-area: now; display: flex; flex-direction: column; }
+.wx-week { grid-area: week; display: flex; flex-direction: column; }
+.wx-hours-card { grid-area: hours; display: flex; flex-direction: column; }
+
+.wx-temp { display: flex; align-items: flex-start; margin-top: 6px; }
+.wx-temp b { font-size: 66px; font-weight: 600; line-height: .95; letter-spacing: -2px; }
+.wx-temp i { font-style: normal; font-size: 22px; color: var(--muted); margin: 6px 0 0 3px; }
+.wx-sub { font-size: 15px; color: var(--muted); margin-top: 6px; }
+
+.wx-stats { display: flex; margin-top: auto; padding-top: 12px; }
+.wx-stats div { display: flex; flex-direction: column; margin-right: 26px; }
+.wx-stats span { font-size: 9.5px; letter-spacing: 1.4px; color: var(--muted); }
+.wx-stats b { font-size: 16px; font-weight: 500; margin-top: 3px; }
+
+.wx-days { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-between; }
+
+.wx-day { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; }
+.wx-day div { display: flex; flex-direction: column; }
+.wx-day b { font-size: 15.5px; font-weight: 500; }
+.wx-day span { font-size: 11.5px; color: var(--faint); margin-top: 1px; }
+.wx-day i { font-style: normal; font-size: 15.5px; color: var(--muted); }
+
+.wx-hours { flex: 1 1 auto; display: flex; align-items: center; justify-content: space-between; }
+.wx-hours div { display: flex; flex-direction: column; align-items: center; }
+.wx-hours span { font-size: 12px; color: var(--muted); }
+.wx-hours b { font-size: 18px; font-weight: 500; margin-top: 4px; }
+
+/* ---- generic modules ---- */
+.hero-line b { font-size: 46px; }
+.hero-line i { font-size: 20px; }
+.hero-sub { font-size: 12.5px; }
+.sect h3 { font-size: 10px; }
+.kv span { font-size: 10px; }
+.kv b { font-size: 15px; }
+.gauge b { font-size: 27px; }
+.gauge span { font-size: 9.5px; }
+.meter-top { font-size: 11px; }
+.meter-top b { font-size: 15px; }
+.row { padding: 9px 0; }
+.row-text b { font-size: 15px; max-width: 520px; }
+.row-text span { font-size: 11px; }
+.row > b { font-size: 15px; }
+.btns button { height: 50px; font-size: 12px; }
+.chip { font-size: 11.5px; padding: 8px 12px; }
+.hours span { font-size: 10.5px; }
+.hours b { font-size: 14px; }
+
+/* four headlines fill the card without a half-cut row */
+.news-list { display: flex; flex-direction: column; justify-content: space-between; }
+.news-item { padding: 8px 2px; }
+.news-item b { font-size: 17px; max-height: 46px; }
+
+#view-news { height: 100%; }
+.news-card { height: 100%; display: flex; flex-direction: column; }
+
+/* volume OSD: big enough to read at a glance from the driver's seat */
+#vol-pop {
+  flex-direction: column;
+  align-items: stretch;
+  width: 320px;
+  top: 58px;
+  padding: 14px 20px 18px;
+  border-radius: 18px;
+  background: #111722;
+  box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.8);
+}
+
+.vol-pop-row { display: flex; align-items: baseline; }
+
+#vol-pop span {
+  font-size: 30px;
+  line-height: 1;
+  margin-right: 14px;
+  color: var(--media);
+}
+
+#vol-pop b {
+  font-size: 46px;
+  font-weight: 600;
+  letter-spacing: -1px;
+  min-width: 0;
+  text-align: left;
+}
+
+#vol-pop i {
+  width: 100%;
+  height: 10px;
+  margin: 12px 0 0;
+  border-radius: 5px;
+}
+
+#vol-pop s { border-radius: 5px; }
