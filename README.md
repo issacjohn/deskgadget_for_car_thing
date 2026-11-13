@@ -58,6 +58,23 @@ With more than one adb device connected, pass the serial:
 powershell -ExecutionPolicy Bypass -File tools\car_thing.ps1 -Serial 8558R685Q811
 ```
 
+### Disable DeskThing
+
+DeskGadget only needs the kiosk; DeskThing's native helper
+(`qt-superbird-app`, supervisor program `superbird`) is not used by this client.
+Stop it permanently with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\car_thing.ps1 -DisableDeskThing
+powershell -ExecutionPolicy Bypass -File tools\car_thing.ps1 -EnableDeskThing   # undo
+```
+
+That sets `autostart=false` for the `superbird` program in
+`/etc/supervisord.conf` and stops it now. Safe to do: Chromium, the touch
+screen, `sp-als-backlight` and `earlyoom` are separate supervisor programs, and
+the DeskThing webapp is already bypassed by the redirect. `-Restore` brings the
+whole original setup back.
+
 ### Start automatically
 
 The device side is automatic: the kiosk's start page redirects to the client,
