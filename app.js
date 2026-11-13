@@ -33,6 +33,9 @@
   var volDrag = false;
   var volTimer = 0;
   var volPending = null;
+  var volPopupTimer = 0;
+  var lastVolume = null;
+  var lastMuted = false;
   var otherKey = '';
   var playState = null;
   var outputsKey = '';
@@ -404,6 +407,15 @@
 
   /* -------------------------------- media ----------------------------- */
 
+  function volumePopup(value, up, muted) {
+    setText(el.volPopArrow, muted ? '\u00d7' : up ? '\u2191' : '\u2193');
+    setText(el.volPopVal, muted ? 'MUTED' : value + '%');
+    el.volPopBar.style.width = Math.max(0, Math.min(100, value)) + '%';
+    el.volPop.hidden = false;
+    clearTimeout(volPopupTimer);
+    volPopupTimer = setTimeout(function () { el.volPop.hidden = true; }, 1300);
+  }
+
   function paintVolume(value, muted) {
     volValue = Math.max(0, Math.min(100, Math.round(value)));
     el.volFill.style.width = volValue + '%';
@@ -476,7 +488,14 @@
     var volumePage = pages.media || page;
     var hero = block(volumePage, 'hero');
     if (hero && hero.slider) {
-      if (!dragging) paintVolume(Math.round(hero.slider.value || 0), hero.value === 'MUTED');
+      var shown = Math.round(hero.slider.value || 0);
+      var muted = hero.value === 'MUTED';
+      if (!dragging) paintVolume(shown, muted);
+      if (lastVolume !== null && (shown !== lastVolume || muted !== lastMuted)) {
+        volumePopup(shown, shown > lastVolume, muted);
+      }
+      lastVolume = shown;
+      lastMuted = muted;
     }
 
     var toggles = source === 'media' ? block(page, 'toggles') : null;
@@ -803,6 +822,10 @@
       volTrack: $('vol-track'),
       volFill: $('vol-fill'),
       volKnob: $('vol-knob'),
+      volPop: $('vol-pop'),
+      volPopArrow: $('vol-pop-arrow'),
+      volPopVal: $('vol-pop-val'),
+      volPopBar: $('vol-pop-bar'),
       volUp: $('vol-up'),
       volDown: $('vol-down'),
       outputs: $('outputs'),
@@ -856,13 +879,18 @@
 
     var lastWheel = 0;
 
-    // The Car Thing's rotary wheel reaches the kiosk as a wheel event
-    // (REL_HWHEEL from the kernel). Turn it into PC volume, one step per detent.
+    // The Car Thing's rotary wheel is a REL_HWHEEL device, so the kiosk sends
+    // it as horizontal scroll (deltaX). Turning right increases, left
+    // decreases; a plain wheel falls back to deltaY.
     document.addEventListener('wheel', function (event) {
+      var horizontal = event.deltaX !== 0 && event.deltaY === 0;
+      var delta = horizontal ? event.deltaX : event.deltaY;
+      if (!delta) return;
       var now = Date.now();
-      if (now - lastWheel < 70) return;
+      if (now - lastWheel < 60) return;
       lastWheel = now;
-      act('media', event.deltaY < 0 ? 'volume_up' : 'volume_down');
+      var up = horizontal ? delta > 0 : delta < 0;
+      act('media', up ? 'volume_up' : 'volume_down');
       event.preventDefault();
     }, { passive: false });
 

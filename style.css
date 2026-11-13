@@ -659,3 +659,53 @@ main { grid-area: main; padding: 10px 12px 12px; min-height: 0; }
 }
 
 #view-media.no-outputs .endpoints { display: none; }
+
+/* volume change popup */
+#vol-pop {
+  position: fixed;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  padding: 9px 16px 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #121822;
+  z-index: 20;
+}
+
+#vol-pop[hidden] { display: none; }
+
+#vol-pop span {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--media);
+  margin-right: 9px;
+}
+
+#vol-pop b {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -.3px;
+  min-width: 58px;
+  text-align: right;
+}
+
+#vol-pop i {
+  display: block;
+  width: 82px;
+  height: 6px;
+  margin-left: 12px;
+  border-radius: 3px;
+  background: #1a2130;
+  overflow: hidden;
+}
+
+#vol-pop s {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 3px;
+  background: var(--media);
+}
