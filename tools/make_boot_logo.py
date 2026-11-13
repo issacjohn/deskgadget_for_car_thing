@@ -115,7 +115,7 @@ def rgb565(img: Image.Image) -> bytes:
 
 
 def main() -> int:
-    if len(sys.argv) == 4 and sys.argv[1] == "--png":
+    if len(sys.argv) == 3 and sys.argv[1] == "--png":
         # the same design as Weston's background, no partition involved
         design().save(sys.argv[2])
         print("wrote", sys.argv[2])
