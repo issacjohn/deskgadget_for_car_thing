@@ -45,11 +45,12 @@ powershell -ExecutionPolicy Bypass -File tools\car_thing.ps1
 
 The script:
 
-1. runs `adb reverse tcp:8787 tcp:8787`, so `127.0.0.1:8787` on the Car Thing
-   is the DeskGadget server on the PC;
-2. pushes `index.html`, `style.css` and `app.js` to `/tmp/deskgadget`;
-3. points the running kiosk at `file:///tmp/deskgadget/index.html` through the
-   Chromium DevTools port that DeskThing leaves open.
+1. copies `index.html`, `style.css` and `app.js` to **`/var/deskgadget`** — the
+   device's data partition, so the client survives a reboot;
+2. backs up the DeskThing start page and replaces it with a redirect, so the
+   kiosk boots into DeskGadget (`-Restore` puts DeskThing back);
+3. runs `adb reverse tcp:8787 tcp:8787`, giving the device a route to the PC;
+4. restarts the kiosk.
 
 With more than one adb device connected, pass the serial:
 
@@ -57,20 +58,35 @@ With more than one adb device connected, pass the serial:
 powershell -ExecutionPolicy Bypass -File tools\car_thing.ps1 -Serial 8558R685Q811
 ```
 
-`/tmp` lives in RAM, so a reboot brings DeskThing back and the files vanish.
-Run the script again after a reboot.
+### Start automatically
+
+The device side is already automatic: the kiosk's start page redirects to the
+client, so turning the Car Thing on lands on DeskGadget.
+
+The USB tunnel is the part that has to be rebuilt on the PC after every reboot
+or replug, because `adb reverse` belongs to the connection, not the device:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\install_autostart.ps1
+```
+
+That registers a per-user task at logon which watches for the Car Thing and
+restores the tunnel. It checks `adb reverse --list` first, backs off a minute
+after a failure, and stops for a replug after three — this firmware's adbd
+sometimes answers with `protocol fault` and drops the USB link, so it must not
+retry hard.
 
 ### Manual
 
 ```sh
 adb reverse tcp:8787 tcp:8787
-adb shell mkdir -p /tmp/deskgadget
-adb push index.html style.css app.js /tmp/deskgadget/
-adb forward tcp:2222 tcp:2222
+adb shell mkdir -p /var/deskgadget
+adb push index.html style.css app.js /var/deskgadget/
+adb shell supervisorctl restart chromium
 ```
 
-Then navigate the kiosk to `file:///tmp/deskgadget/index.html` (DevTools on
-`http://127.0.0.1:2222`), or open that URL in any browser on the device.
+The kiosk loads `file:///var/deskgadget/index.html`; you can also open that URL
+in a browser on the device.
 
 ## Preview on a PC
 
