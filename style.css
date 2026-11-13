@@ -709,3 +709,13 @@ main { grid-area: main; padding: 10px 12px 12px; min-height: 0; }
   border-radius: 3px;
   background: var(--media);
 }
+
+/* the car module is player-only */
+#view-media.solo .media-grid {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  grid-template-areas: "now";
+}
+
+#view-media.solo .volume,
+#view-media.solo .endpoints { display: none; }

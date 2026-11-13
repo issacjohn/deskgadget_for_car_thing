@@ -513,6 +513,11 @@
 
     var toggles = source === 'media' ? block(page, 'toggles') : null;
     renderOutputs(toggles ? toggles.items || [] : []);
+
+    // the car module is player-only: no volume card, no outputs. The rotary
+    // still drives volume, and the popup reports each change.
+    var solo = source !== 'media';
+    el.viewMedia.classList.toggle('solo', solo);
     el.viewMedia.classList.toggle('no-outputs', !toggles);
   }
 
