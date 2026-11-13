@@ -29,7 +29,10 @@
   var reconnectTimer = 0;
   var lastGraph = '';
   var dragging = false;
+  var volValue = 0;
+  var volDrag = false;
   var volTimer = 0;
+  var volPending = null;
   var otherKey = '';
   var playState = null;
   var outputsKey = '';
@@ -132,7 +135,7 @@
     } else if (msg.type === 'page') {
       pages[msg.module] = msg.page;
       if (msg.module === 'system') renderSystem();
-      else if (msg.module === 'media') renderMedia();
+      else if (msg.module === 'media' || msg.module === 'media_carthing') renderMedia();
       else if (msg.module === current) renderOther(current, true);
     } else if (msg.type === 'toast') {
       toast(msg.text);
@@ -141,11 +144,19 @@
 
   function orderModules() {
     var ids = Object.keys(pages).filter(function (id) { return !SKIP[id]; });
-    var preferred = ['system', 'media'].filter(function (id) {
-      return ids.indexOf(id) >= 0;
+    var hasCar = ids.indexOf('media_carthing') >= 0;
+    var wanted = ['system', hasCar ? 'media_carthing' : 'media'];
+    var preferred = wanted.filter(function (id) { return ids.indexOf(id) >= 0; });
+    var others = ids.filter(function (id) {
+      if (preferred.indexOf(id) >= 0) return false;
+      if (hasCar && id === 'media') return false;
+      return true;
     });
-    var others = ids.filter(function (id) { return preferred.indexOf(id) < 0; });
     return preferred.concat(others).slice(0, MAX_MODULES);
+  }
+
+  function mediaPageId() {
+    return pages.media_carthing ? 'media_carthing' : 'media';
   }
 
   function block(page, type) {
@@ -167,6 +178,7 @@
   var LABELS = {
     system: 'System',
     media: 'Media',
+    media_carthing: 'Media',
     weather: 'Weather',
     news: 'News',
     drives: 'Drives',
@@ -180,6 +192,7 @@
   var ICONS = {
     system: '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>',
     media: '<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="3"/><circle cx="16.5" cy="16" r="3"/>',
+    media_carthing: '<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="3"/><circle cx="16.5" cy="16" r="3"/>',
     weather: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
     news: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/>',
     drives: '<rect x="4" y="6" width="16" height="12" rx="2"/><path d="M7 15h2M15 15h2"/>',
@@ -211,7 +224,7 @@
     el.rail.setAttribute('data-view', id);
 
     var isSystem = id === 'system';
-    var isMedia = id === 'media';
+    var isMedia = id === 'media' || id === 'media_carthing';
     el.viewSystem.className = 'view' + (isSystem ? ' is-on' : '');
     el.viewMedia.className = 'view' + (isMedia ? ' is-on' : '');
     el.viewOther.className = 'view' + (!isSystem && !isMedia ? ' is-on' : '');
@@ -391,8 +404,47 @@
 
   /* -------------------------------- media ----------------------------- */
 
+  function paintVolume(value, muted) {
+    volValue = Math.max(0, Math.min(100, Math.round(value)));
+    el.volFill.style.width = volValue + '%';
+    el.volKnob.style.left = volValue + '%';
+    setText(el.volVal, muted ? 'MUTED' : volValue + '%');
+  }
+
+  function applyVolume(value, sendNow) {
+    paintVolume(value, false);
+    volPending = volValue;
+    clearTimeout(volTimer);
+    if (sendNow) {
+      act('media', 'set_volume', { value: volPending });
+      volPending = null;
+    } else {
+      volTimer = setTimeout(function () {
+        if (volPending !== null) {
+          act('media', 'set_volume', { value: volPending });
+          volPending = null;
+        }
+      }, 90);
+    }
+  }
+
+  function volumeFromEvent(event) {
+    var rect = el.volTrack.getBoundingClientRect();
+    var point = event;
+    return ((point.clientX - rect.left) / rect.width) * 100;
+  }
+
+  function endVolumeDrag(event) {
+    if (!volDrag) return;
+    volDrag = false;
+    dragging = false;
+    applyVolume(volValue, true);
+    if (event) event.preventDefault();
+  }
+
   function renderMedia() {
-    var page = pages.media;
+    var source = mediaPageId();
+    var page = pages[source];
     if (!page) return;
 
     var now = block(page, 'nowplaying');
@@ -419,17 +471,17 @@
       setPlayIcon(false);
     }
 
-    var hero = block(page, 'hero');
+    // volume always comes from the full Media module, so the car screen can
+    // control it even though its own page has no volume block
+    var volumePage = pages.media || page;
+    var hero = block(volumePage, 'hero');
     if (hero && hero.slider) {
-      var value = Math.round(hero.slider.value || 0);
-      if (!dragging) {
-        el.vol.value = String(value);
-        setText(el.volVal, hero.value === 'MUTED' ? 'MUTED' : value + '%');
-      }
+      if (!dragging) paintVolume(Math.round(hero.slider.value || 0), hero.value === 'MUTED');
     }
 
-    var toggles = block(page, 'toggles');
+    var toggles = source === 'media' ? block(page, 'toggles') : null;
     renderOutputs(toggles ? toggles.items || [] : []);
+    el.viewMedia.classList.toggle('no-outputs', !toggles);
   }
 
   function setPlayIcon(playing) {
@@ -465,7 +517,7 @@
     var track = el.mSeek.querySelector('.seek-track');
     var rect = track.getBoundingClientRect();
     var fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-    act('media', 'seek', { value: Math.round(fraction * duration) });
+    act(mediaPageId(), 'seek', { value: Math.round(fraction * duration) });
   }
 
   /* ---------------------------- other modules ------------------------- */
@@ -746,8 +798,11 @@
       mDur: $('m-dur'),
       mSeek: $('m-seek'),
       playIcon: $('m-play-icon'),
-      vol: $('vol'),
       volVal: $('vol-val'),
+      volSlider: $('vol-slider'),
+      volTrack: $('vol-track'),
+      volFill: $('vol-fill'),
+      volKnob: $('vol-knob'),
       volUp: $('vol-up'),
       volDown: $('vol-down'),
       outputs: $('outputs'),
@@ -756,21 +811,31 @@
 
     Array.prototype.forEach.call(document.querySelectorAll('.tbtn'), function (button) {
       button.addEventListener('click', function () {
-        act('media', button.getAttribute('data-action'));
+        act(mediaPageId(), button.getAttribute('data-action'));
       });
     });
 
     el.mSeek.addEventListener('click', seek);
 
-    el.vol.addEventListener('input', function () {
+    el.volSlider.addEventListener('pointerdown', function (event) {
+      volDrag = true;
       dragging = true;
-      setText(el.volVal, el.vol.value + '%');
-      clearTimeout(volTimer);
-      volTimer = setTimeout(function () {
-        act('media', 'set_volume', { value: parseInt(el.vol.value, 10) });
-        dragging = false;
-      }, 120);
+      if (el.volSlider.setPointerCapture) {
+        try { el.volSlider.setPointerCapture(event.pointerId); } catch (e) { /* ignore */ }
+      }
+      applyVolume(volumeFromEvent(event), false);
+      event.preventDefault();
     });
+
+    el.volSlider.addEventListener('pointermove', function (event) {
+      if (!volDrag) return;
+      applyVolume(volumeFromEvent(event), false);
+      event.preventDefault();
+    });
+
+    el.volSlider.addEventListener('pointerup', endVolumeDrag);
+    el.volSlider.addEventListener('pointercancel', endVolumeDrag);
+    el.volSlider.addEventListener('lostpointercapture', endVolumeDrag);
 
     el.volUp.addEventListener('click', function () { act('media', 'volume_up'); });
     el.volDown.addEventListener('click', function () { act('media', 'volume_down'); });
@@ -788,6 +853,18 @@
       if (url) payload.url = url;
       act(current, target.getAttribute('data-act'), payload);
     });
+
+    var lastWheel = 0;
+
+    // The Car Thing's rotary wheel reaches the kiosk as a wheel event
+    // (REL_HWHEEL from the kernel). Turn it into PC volume, one step per detent.
+    document.addEventListener('wheel', function (event) {
+      var now = Date.now();
+      if (now - lastWheel < 70) return;
+      lastWheel = now;
+      act('media', event.deltaY < 0 ? 'volume_up' : 'volume_down');
+      event.preventDefault();
+    }, { passive: false });
 
     document.addEventListener('keydown', function (event) {
       var key = event.key;
