@@ -66,6 +66,31 @@ a progress line — that waits for `/var/deskgadget/index.html` to exist and the
 navigates. No DeskThing logo, no logs. Edit `tools/boot.html`; add `?stay` to
 the URL to preview it without redirecting.
 
+### Boot logo (firmware)
+
+The screen before Chromium is built from two pieces: the bootloader's `logo`
+partition (six 480x800 BMPs: the adapter warning and the ThingsLab / USB-burn
+screens) and Weston's background image, shown while Chromium starts.
+
+```powershell
+# back up the logo partition, then rebuild it
+adb shell "dd if=/dev/block/179:7 of=/var/logo-backup.img bs=1M"
+adb pull /var/logo-backup.img
+python tools\make_boot_logo.py logo-backup.img logo-new.img
+adb push logo-new.img /var/logo-new.img
+adb shell "dd if=/var/logo-new.img of=/dev/block/179:7 bs=1M; sync"
+
+# Weston's background, the same design
+python tools\make_boot_logo.py --png appstart.png
+adb shell "mount -o remount,rw /"
+adb push appstart.png /usr/share/qt-superbird-app/webapp/images/appstart.png
+```
+
+Restore the bootloader logo with `dd if=/var/logo-backup.img of=/dev/block/179:7
+bs=1M; sync`; the original Weston background is kept at
+`/var/deskgadget/appstart-orig.png`. Both files live on the root filesystem, so
+they belong to the active slot.
+
 ### Unneeded services
 
 The device ships services for Spotify's app that DeskGadget never uses. All of
