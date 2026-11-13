@@ -4,6 +4,7 @@ param(
     [switch]$NoLaunch,
     [switch]$Autostart,
     [switch]$Reverse,
+    [switch]$TrimServices,
     [switch]$DisableDeskThing,
     [switch]$EnableDeskThing,
     [switch]$Restore
@@ -55,6 +56,12 @@ if ($DisableDeskThing -or $EnableDeskThing) {
         Write-Host "  DeskThing helper started again"
     }
     exit 0
+}
+
+if ($TrimServices) {
+    Write-Host "  stopping the services DeskGadget does not use"
+    & adb -s $Serial push (Join-Path $PSScriptRoot "trim_services.sh") "$client/trim_services.sh" | Out-Null
+    & adb -s $Serial shell "sh $client/trim_services.sh"
 }
 
 Write-Host "  installing to $client"

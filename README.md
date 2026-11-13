@@ -80,6 +80,29 @@ powershell -ExecutionPolicy Bypass -File tools\car_thing.ps1 -DisableDeskThing  
 and stopping them. Keep `backlight`, `chromium` and `earlyoom`: the screen,
 the UI and the memory guard.
 
+`tools\trim_services.sh` does all three (superbird, bluetoothd, swupdate) and
+can be run from Windows with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\car_thing.ps1 -TrimServices
+```
+
+### The device has two system slots
+
+`/` is mounted read-only from an A/B partition (`_a` = `mmcblk0p14`,
+`_b` = `mmcblk0p15`) and the bootloader can switch slots after a failed boot.
+Everything on `/` — the start page, `supervisord.conf` — therefore belongs to
+one slot; the client in `/var/deskgadget` is shared and always survives.
+
+If a reboot ever lands on DeskThing again, check:
+
+```sh
+cat /proc/cmdline | tr ' ' '\n' | grep slot
+```
+
+and re-run `car_thing.ps1` to apply the start page and the service changes to
+the slot that is now active.
+
 ### Disable DeskThing
 
 DeskGadget only needs the kiosk; DeskThing's native helper
