@@ -38,6 +38,7 @@
   var lastMuted = false;
   var otherKey = '';
   var playState = null;
+  var lastArt = '';
   var outputsKey = '';
   var capRows = [];
   var netCells = null;
@@ -464,6 +465,7 @@
       setText(el.mTitle, now.title || 'Nothing playing');
       setText(el.mArtist, now.artist || now.source || '');
       setText(el.mSource, (now.source || '').toUpperCase());
+      setArtwork(now.artwork);
       var duration = now.duration || 0;
       var position = now.position || 0;
       var pct = duration > 0 ? Math.min(1, position / duration) : 0;
@@ -476,6 +478,7 @@
       setText(el.mTitle, 'Nothing playing');
       setText(el.mArtist, 'Start something on the PC');
       setText(el.mSource, '');
+      setArtwork('');
       el.mFill.style.width = '0%';
       setText(el.mPos, '0:00');
       setText(el.mDur, '0:00');
@@ -519,6 +522,19 @@
     var solo = source !== 'media';
     el.viewMedia.classList.toggle('solo', solo);
     el.viewMedia.classList.toggle('no-outputs', !toggles);
+  }
+
+  function setArtwork(path) {
+    var url = path ? 'http://' + HOST + ':' + PORT + path : '';
+    if (url === lastArt) return;
+    lastArt = url;
+    if (!url) {
+      el.mArt.removeAttribute('src');
+      el.mArt.classList.remove('is-on');
+      return;
+    }
+    el.mArt.src = url;
+    el.mArt.classList.add('is-on');
   }
 
   function setPlayIcon(playing) {
@@ -835,6 +851,7 @@
       mDur: $('m-dur'),
       mSeek: $('m-seek'),
       playIcon: $('m-play-icon'),
+      mArt: $('m-art'),
       volVal: $('vol-val'),
       volSlider: $('vol-slider'),
       volTrack: $('vol-track'),

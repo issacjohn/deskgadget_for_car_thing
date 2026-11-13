@@ -719,3 +719,21 @@ main { grid-area: main; padding: 10px 12px 12px; min-height: 0; }
 
 #view-media.solo .volume,
 #view-media.solo .endpoints { display: none; }
+
+/* artwork */
+.now-head { display: flex; align-items: flex-start; }
+
+#m-art {
+  display: none;
+  width: 148px;
+  height: 148px;
+  flex: 0 0 148px;
+  margin-right: 16px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #151b25;
+}
+
+#m-art.is-on { display: block; }
+
+#view-media.solo #m-art { width: 176px; height: 176px; flex-basis: 176px; }
