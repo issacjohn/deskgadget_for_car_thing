@@ -24,7 +24,8 @@ It shows only:
 | Module | Contents |
 |---|---|
 | **System** | CPU utilization + package temperature + 60 s history, memory/disk capacity, GPU core temperature with hot spot and memory junction, download/upload/ping, LAN/public IP, and the PC actions (lock, screen off, desktop, capture) |
-| **Media** | now playing (title, artist, source, seek), transport (mute, previous, play/pause, next), PC volume slider, output devices |
+| **Media** | now playing (title, artist, source, seek), transport (mute, previous, play/pause, next), PC volume with − / + steps and a slider, output devices |
+| **+ up to two more** | any other enabled module renders in a compact generic layout (Weather, News, Drives, Shortcuts, AudioMesh) |
 
 Camera, AudioMesh, Windows, News, Weather and the mouse/keyboard pad are not
 part of this client.
@@ -116,6 +117,26 @@ Open <http://127.0.0.1:8099/?view=system> or `?view=media`. The page connects to
 `ws://127.0.0.1:8787/ws`; point it elsewhere with `?host=192.168.0.10&port=8787`.
 
 ## How it connects
+
+### Four modules, four buttons
+
+The rail loads at most **four** modules: System and Media first, then the next
+modules the device has enabled, in the dashboard's order. Camera is skipped —
+there is nothing to capture on a Car Thing.
+
+The Car Thing's hardware buttons arrive as ordinary key events in the kiosk:
+
+| Button | Action |
+|---|---|
+| `1`–`4` | select module 1–4 |
+| back (Esc) | previous module |
+| arrows | cycle modules; up/down adjust volume |
+| enter | play/pause on Media |
+
+The on-screen volume has − / + buttons and a wide slider; both drive the PC's
+volume through the Media module.
+
+### Protocol
 
 The client sends the normal DeskGadget hello:
 

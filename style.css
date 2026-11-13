@@ -461,3 +461,150 @@ main { grid-area: main; padding: 10px 12px 12px; min-height: 0; }
 }
 
 .empty { color: var(--faint); font-size: 10px; margin-top: 8px; }
+
+/* --------------------------- generic modules ------------------------ */
+
+.other { height: 100%; }
+
+.other .card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px 6px;
+}
+
+.other-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.other-scroll::-webkit-scrollbar { display: none; }
+
+.other-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.other-head span { font-size: 8.5px; letter-spacing: 1.6px; color: var(--muted); }
+
+.sect { margin-bottom: 12px; }
+.sect:last-child { margin-bottom: 2px; }
+
+.sect h3 {
+  margin: 0 0 6px;
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.hero-line { display: flex; align-items: baseline; }
+.hero-line b { font-size: 40px; font-weight: 600; line-height: 1; }
+.hero-line i { font-style: normal; font-size: 18px; color: var(--muted); margin-left: 4px; }
+.hero-sub { font-size: 10px; color: var(--faint); margin-top: 4px; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; column-gap: 14px; }
+
+.kv {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #151c26;
+}
+.kv span { font-size: 8.5px; letter-spacing: 1.1px; color: var(--muted); text-transform: uppercase; }
+.kv b { font-size: 13px; font-weight: 500; }
+
+.gauge { display: flex; align-items: baseline; }
+.gauge b { font-size: 24px; font-weight: 600; }
+.gauge span { font-size: 8px; letter-spacing: 1.1px; color: var(--muted); margin-left: 5px; }
+
+.meter { margin-bottom: 8px; }
+.meter-top { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); }
+.meter-top b { color: var(--ink); font-size: 13px; font-weight: 500; }
+.meter-track { height: 7px; border-radius: 4px; background: #1a2130; margin-top: 4px; }
+.meter-track i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+
+.rows { display: flex; flex-direction: column; }
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid #151c26;
+}
+.row-text { display: flex; flex-direction: column; min-width: 0; }
+.row-text b { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 560px; }
+.row-text span { font-size: 9px; color: var(--faint); margin-top: 2px; }
+.row > b { font-size: 13px; font-weight: 500; margin-left: 10px; }
+
+.btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.btns button {
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #0d131b;
+  color: var(--ink);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  padding: 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btns button:active { background: #182233; }
+
+.chip.is-off { opacity: .55; }
+
+.hours { display: flex; justify-content: space-between; }
+.hours div { display: flex; flex-direction: column; align-items: center; font-size: 9px; color: var(--muted); }
+.hours b { color: var(--ink); font-size: 12px; font-weight: 500; margin-top: 3px; }
+
+.other-empty { color: var(--faint); font-size: 10px; margin-top: 10px; }
+
+/* volume steps */
+.vol-controls { display: flex; align-items: center; }
+
+.vol-step {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #0d131b;
+  color: var(--media);
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.vol-step:active { background: #182233; }
+
+#vol { flex: 1 1 auto; }
+
+.other-slider {
+  width: 100%;
+  height: 10px;
+  margin: 6px 0 0;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 5px;
+  background: #1a2130;
+}
+
+.other-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid #0c1219;
+}

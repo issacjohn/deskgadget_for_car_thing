@@ -3,6 +3,7 @@ param(
     [int]$Port = 8787,
     [switch]$NoLaunch,
     [switch]$Autostart,
+    [switch]$Reverse,
     [switch]$DisableDeskThing,
     [switch]$EnableDeskThing,
     [switch]$Restore
@@ -72,7 +73,13 @@ if ($installed -ne "1") {
 }
 
 Write-Host "  usb reverse tcp:$Port -> PC:$Port"
-& adb -s $Serial reverse "tcp:$Port" "tcp:$Port" | Out-Null
+if ($Reverse) {
+    & adb -s $Serial reverse "tcp:$Port" "tcp:$Port" | Out-Null
+    Write-Host "  tunnel requested"
+} else {
+    Write-Host "  leaving the tunnel alone (adb reverse can drop this device's USB link)"
+    Write-Host "  use -Reverse only when the page shows a red dot"
+}
 
 if (-not $NoLaunch) {
     Write-Host "  restarting the kiosk"

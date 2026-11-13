@@ -1,9 +1,13 @@
 /* DeskGadget for Car Thing
-   Talks to the DeskGadget server on /ws and renders only the System and Media
-   modules. Everything is updated in place: no innerHTML churn per tick, no
-   requestAnimationFrame loop, one canvas redraw per data change. */
+   Talks to the DeskGadget server on /ws and renders up to four modules:
+   System and Media have dedicated layouts, the rest use a compact generic one.
+   Everything is updated in place: no innerHTML churn per tick, no animation
+   loop, one canvas redraw per data change. */
 (function () {
   'use strict';
+
+  var MAX_MODULES = 4;
+  var SKIP = { camera: 1 };
 
   var params = new URLSearchParams(location.search);
   var HOST = params.get('host') ||
@@ -17,21 +21,33 @@
 
   var el = {};
   var pages = {};
-  var view = localStorage.getItem('dg_carthing_view') === 'media' ? 'media' : 'system';
-  if (params.get('view') === 'media' || params.get('view') === 'system') {
-    view = params.get('view');
-  }
+  var modules = [];
+  var current = localStorage.getItem('dg_carthing_view') || 'system';
+  if (params.get('view')) current = params.get('view');
   var socket = null;
   var retry = 800;
   var reconnectTimer = 0;
   var lastGraph = '';
   var dragging = false;
   var volTimer = 0;
+  var otherKey = '';
+  var playState = null;
+  var outputsKey = '';
+  var capRows = [];
+  var netCells = null;
+  var actionIds = '';
 
   function $(id) { return document.getElementById(id); }
 
+  function h(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+
   function setText(node, text) {
-    if (node && node.textContent !== text) node.textContent = text;
+    if (node && node.textContent !== String(text)) node.textContent = String(text);
   }
 
   function tempColor(t) {
@@ -108,14 +124,28 @@
       pages = {};
       (msg.pages || []).forEach(function (page) { pages[page.id] = page; });
       if (msg.server && msg.server.name) setText(el.server, msg.server.name);
+      modules = orderModules();
+      renderRail();
+      if (modules.indexOf(current) < 0) current = modules[0] || 'system';
+      setView(current, true);
       renderAll();
     } else if (msg.type === 'page') {
       pages[msg.module] = msg.page;
       if (msg.module === 'system') renderSystem();
-      if (msg.module === 'media') renderMedia();
+      else if (msg.module === 'media') renderMedia();
+      else if (msg.module === current) renderOther(current, true);
     } else if (msg.type === 'toast') {
       toast(msg.text);
     }
+  }
+
+  function orderModules() {
+    var ids = Object.keys(pages).filter(function (id) { return !SKIP[id]; });
+    var preferred = ['system', 'media'].filter(function (id) {
+      return ids.indexOf(id) >= 0;
+    });
+    var others = ids.filter(function (id) { return preferred.indexOf(id) < 0; });
+    return preferred.concat(others).slice(0, MAX_MODULES);
   }
 
   function block(page, type) {
@@ -126,12 +156,81 @@
     return null;
   }
 
-  /* ------------------------------- system ----------------------------- */
-
   function renderAll() {
     renderSystem();
     renderMedia();
+    if (current !== 'system' && current !== 'media') renderOther(current, true);
   }
+
+  /* ------------------------------- rail ------------------------------- */
+
+  var LABELS = {
+    system: 'System',
+    media: 'Media',
+    weather: 'Weather',
+    news: 'News',
+    drives: 'Drives',
+    shortcuts: 'Shortcuts',
+    audiomesh: 'Audio',
+    clipboard: 'Clipboard',
+    windows: 'Windows',
+    mouse: 'Mouse'
+  };
+
+  var ICONS = {
+    system: '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>',
+    media: '<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="3"/><circle cx="16.5" cy="16" r="3"/>',
+    weather: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
+    news: '<rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/>',
+    drives: '<rect x="4" y="6" width="16" height="12" rx="2"/><path d="M7 15h2M15 15h2"/>',
+    shortcuts: '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>',
+    audiomesh: '<path d="M4 12h3l2-5 3 10 2-6 2 3h4"/>',
+    clipboard: '<path d="M9 5h6M9 5a2 2 0 0 0-2 2v12h10V7a2 2 0 0 0-2-2"/>'
+  };
+
+  function renderRail() {
+    el.rail.textContent = '';
+    modules.forEach(function (id) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'rail-btn';
+      button.setAttribute('data-module', id);
+      button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+        (ICONS[id] || '<circle cx="12" cy="12" r="6"/>') + '</svg><span></span>';
+      button.querySelector('span').textContent = LABELS[id] || id;
+      button.addEventListener('click', function () { setView(id); });
+      el.rail.appendChild(button);
+    });
+  }
+
+  function setView(id, quiet) {
+    if (modules.length && modules.indexOf(id) < 0) id = modules[0];
+    current = id;
+    if (!quiet) localStorage.setItem('dg_carthing_view', id);
+    document.body.setAttribute('data-view', id);
+    el.rail.setAttribute('data-view', id);
+
+    var isSystem = id === 'system';
+    var isMedia = id === 'media';
+    el.viewSystem.className = 'view' + (isSystem ? ' is-on' : '');
+    el.viewMedia.className = 'view' + (isMedia ? ' is-on' : '');
+    el.viewOther.className = 'view' + (!isSystem && !isMedia ? ' is-on' : '');
+
+    Array.prototype.forEach.call(el.rail.children, function (button) {
+      button.classList.toggle('is-on', button.getAttribute('data-module') === id);
+    });
+
+    if (!isSystem && !isMedia) renderOther(id, true);
+  }
+
+  function stepView(delta) {
+    if (!modules.length) return;
+    var index = modules.indexOf(current);
+    index = (index + delta + modules.length) % modules.length;
+    setView(modules[index]);
+  }
+
+  /* ------------------------------- system ----------------------------- */
 
   function renderSystem() {
     var page = pages.system;
@@ -175,27 +274,25 @@
     if (controls) renderActions(controls.items || []);
   }
 
-  var capRows = [];
-
   function renderCapacity(items) {
-    var list = el.capList;
     if (capRows.length !== items.length) {
-      list.innerHTML = '';
+      el.capList.textContent = '';
       capRows = items.map(function () {
-        var row = document.createElement('div');
-        row.className = 'cap-row';
-        row.innerHTML =
-          '<div class="cap-top"><span class="cap-k"></span><b></b></div>' +
-          '<div class="cap-track"><div class="cap-fill"></div></div>' +
-          '<div class="cap-note"></div>';
-        list.appendChild(row);
-        return {
-          k: row.querySelector('.cap-k'),
-          pct: row.querySelector('.cap-top b'),
-          fill: row.querySelector('.cap-fill'),
-          note: row.querySelector('.cap-note'),
-          track: row.querySelector('.cap-track')
-        };
+        var row = h('div', 'cap-row');
+        var top = h('div', 'cap-top');
+        var k = h('span', 'cap-k');
+        var pct = h('b');
+        top.appendChild(k);
+        top.appendChild(pct);
+        var track = h('div', 'cap-track');
+        var fill = h('div', 'cap-fill');
+        track.appendChild(fill);
+        var note = h('div', 'cap-note');
+        row.appendChild(top);
+        row.appendChild(track);
+        row.appendChild(note);
+        el.capList.appendChild(row);
+        return { k: k, pct: pct, fill: fill, note: note };
       });
     }
     items.forEach(function (item, i) {
@@ -209,16 +306,17 @@
     });
   }
 
-  var netCells = null;
-
   function renderNet(items) {
     if (!netCells || netCells.length !== items.length) {
-      el.net.innerHTML = '';
+      el.net.textContent = '';
       netCells = items.map(function () {
-        var cell = document.createElement('div');
-        cell.innerHTML = '<span></span><b></b>';
+        var cell = h('div');
+        var label = h('span');
+        var value = h('b');
+        cell.appendChild(label);
+        cell.appendChild(value);
         el.net.appendChild(cell);
-        return { label: cell.querySelector('span'), value: cell.querySelector('b') };
+        return { label: label, value: value };
       });
     }
     items.forEach(function (item, i) {
@@ -227,25 +325,19 @@
     });
   }
 
-  var actionIds = '';
-
   function renderActions(items) {
     var ids = items.map(function (item) { return item.id; }).join(',');
-    if (ids !== actionIds) {
-      actionIds = ids;
-      el.actions.innerHTML = '';
-      items.forEach(function (item) {
-        var button = document.createElement('button');
-        button.type = 'button';
-        button.setAttribute('data-id', item.id);
-        button.innerHTML = actionIcon(item.id) + '<span></span>';
-        button.querySelector('span').textContent = item.label;
-        button.addEventListener('click', function () {
-          act('system', item.id);
-        });
-        el.actions.appendChild(button);
-      });
-    }
+    if (ids === actionIds) return;
+    actionIds = ids;
+    el.actions.textContent = '';
+    items.forEach(function (item) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.innerHTML = actionIcon(item.id) + '<span></span>';
+      button.querySelector('span').textContent = item.label;
+      button.addEventListener('click', function () { act('system', item.id); });
+      el.actions.appendChild(button);
+    });
   }
 
   function actionIcon(id) {
@@ -253,8 +345,7 @@
       lock: '<svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
       monitor_off: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M9 20h6M12 16v4"/></svg>',
       show_desktop: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M3 9h18"/></svg>',
-      screenshot: '<svg viewBox="0 0 24 24"><path d="M4 8h3l2-2h6l2 2h3v10H4z"/><circle cx="12" cy="13" r="3"/></svg>',
-      cpu_sensor: '<svg viewBox="0 0 24 24"><path d="M12 4v10"/><circle cx="12" cy="17" r="3"/></svg>'
+      screenshot: '<svg viewBox="0 0 24 24"><path d="M4 8h3l2-2h6l2 2h3v10H4z"/><circle cx="12" cy="13" r="3"/></svg>'
     };
     return icons[id] || '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/></svg>';
   }
@@ -299,9 +390,6 @@
   }
 
   /* -------------------------------- media ----------------------------- */
-
-  var outputsKey = '';
-  var playState = null;
 
   function renderMedia() {
     var page = pages.media;
@@ -356,19 +444,14 @@
     var key = items.map(function (item) { return item.id + ':' + item.on; }).join('|');
     if (key === outputsKey) return;
     outputsKey = key;
-    el.outputs.innerHTML = '';
+    el.outputs.textContent = '';
     if (!items.length) {
-      var empty = document.createElement('div');
-      empty.className = 'empty';
-      empty.textContent = 'No outputs reported';
-      el.outputs.appendChild(empty);
+      el.outputs.appendChild(h('div', 'empty', 'No outputs reported'));
       return;
     }
     items.forEach(function (item) {
-      var chip = document.createElement('button');
+      var chip = h('button', 'chip' + (item.on ? ' is-on' : ''), item.label);
       chip.type = 'button';
-      chip.className = 'chip' + (item.on ? ' is-on' : '');
-      chip.textContent = item.label;
       chip.addEventListener('click', function () {
         act('media', 'toggle_endpoint', { id: item.id });
       });
@@ -385,6 +468,231 @@
     act('media', 'seek', { value: Math.round(fraction * duration) });
   }
 
+  /* ---------------------------- other modules ------------------------- */
+
+  function renderOther(id, force) {
+    var page = pages[id];
+    if (!page) return;
+    var key = id + '|' + JSON.stringify(page);
+    if (!force && key === otherKey) return;
+    otherKey = key;
+
+    var body = el.other;
+    body.textContent = '';
+
+    var card = h('article', 'card');
+    var head = h('div', 'other-head');
+    head.appendChild(h('span', null, (LABELS[id] || id).toUpperCase()));
+    head.appendChild(h('span', null, page.title || ''));
+    card.appendChild(head);
+
+    var scroll = h('div', 'other-scroll');
+    card.appendChild(scroll);
+    body.appendChild(card);
+
+    (page.blocks || []).forEach(function (item) {
+      renderBlock(id, scroll, item);
+    });
+
+    if (!page.blocks || !page.blocks.length) {
+      scroll.appendChild(h('div', 'other-empty', 'Nothing to show yet'));
+    }
+
+    Array.prototype.forEach.call(scroll.querySelectorAll('input[type=range]'), function (input) {
+      input.addEventListener('input', function () {
+        var action = input.getAttribute('data-action');
+        if (action) act(input.getAttribute('data-module'), action, { value: parseInt(input.value, 10) });
+      });
+    });
+  }
+
+  function renderBlock(moduleId, parent, item) {
+    if (!item) return;
+    if (item.type === 'hero') return heroBlock(moduleId, parent, item);
+    if (item.type === 'slider') return sliderBlock(moduleId, parent, item);
+    if (item.type === 'kv') return kvBlock(parent, item.items || []);
+    if (item.type === 'gauges') return gaugesBlock(parent, item.items || []);
+    if (item.type === 'meters') return metersBlock(parent, item.items || []);
+    if (item.type === 'list') return listBlock(moduleId, parent, item);
+    if (item.type === 'news') return newsBlock(moduleId, parent, item);
+    if (item.type === 'controls') return controlsBlock(moduleId, parent, item);
+    if (item.type === 'toggles') return togglesBlock(moduleId, parent, item);
+    if (item.type === 'hours') return hoursBlock(parent, item.items || []);
+    if (item.type === 'shortcuts') return shortcutsBlock(moduleId, parent, item);
+  }
+
+  function section(parent, title) {
+    var wrap = h('section', 'sect');
+    if (title) wrap.appendChild(h('h3', null, title));
+    parent.appendChild(wrap);
+    return wrap;
+  }
+
+  function heroBlock(moduleId, parent, item) {
+    var wrap = section(parent, item.label);
+    var line = h('div', 'hero-line');
+    line.appendChild(h('b', null, item.value));
+    if (item.unit) line.appendChild(h('i', null, item.unit));
+    wrap.appendChild(line);
+    if (item.sub) wrap.appendChild(h('div', 'hero-sub', item.sub));
+    if (item.stats && item.stats.length) {
+      var grid = h('div', 'grid3');
+      item.stats.forEach(function (stat) {
+        var cell = h('div', 'kv');
+        cell.appendChild(h('span', null, stat.label));
+        cell.appendChild(h('b', null, stat.value));
+        grid.appendChild(cell);
+      });
+      wrap.appendChild(grid);
+    }
+  }
+
+  function sliderBlock(moduleId, parent, item) {
+    var wrap = section(parent, item.label);
+    var input = document.createElement('input');
+    input.type = 'range';
+    input.min = item.min || 0;
+    input.max = item.max || 100;
+    input.value = item.value || 0;
+    input.className = 'other-slider';
+    input.setAttribute('data-action', item.action || '');
+    input.setAttribute('data-module', moduleId);
+    wrap.appendChild(input);
+  }
+
+  function kvBlock(parent, items) {
+    if (!items.length) return;
+    var grid = h('div', 'grid2');
+    items.forEach(function (item) {
+      var cell = h('div', 'kv');
+      cell.appendChild(h('span', null, item.label));
+      cell.appendChild(h('b', null, item.value));
+      grid.appendChild(cell);
+    });
+    parent.appendChild(grid);
+  }
+
+  function gaugesBlock(parent, items) {
+    if (!items.length) return;
+    var grid = h('div', 'grid3');
+    items.forEach(function (item) {
+      var cell = h('div', 'gauge');
+      cell.appendChild(h('b', null, item.value + (item.suffix || '')));
+      cell.appendChild(h('span', null, item.label));
+      grid.appendChild(cell);
+    });
+    parent.appendChild(grid);
+  }
+
+  function metersBlock(parent, items) {
+    var wrap = section(parent, null);
+    items.forEach(function (item) {
+      var row = h('div', 'meter');
+      var top = h('div', 'meter-top');
+      top.appendChild(h('span', null, item.label));
+      top.appendChild(h('b', null, (item.value || 0) + '%'));
+      row.appendChild(top);
+      var track = h('div', 'meter-track');
+      var fill = h('i');
+      fill.style.width = Math.max(0, Math.min(100, item.value || 0)) + '%';
+      track.appendChild(fill);
+      row.appendChild(track);
+      wrap.appendChild(row);
+    });
+  }
+
+  function listBlock(moduleId, parent, item) {
+    if (!item.items || !item.items.length) return;
+    var wrap = section(parent, item.title);
+    var rows = h('div', 'rows');
+    item.items.forEach(function (entry) {
+      var row = h('div', 'row');
+      var text = h('div', 'row-text');
+      text.appendChild(h('b', null, entry.title || entry.label || ''));
+      if (entry.sub) text.appendChild(h('span', null, entry.sub));
+      row.appendChild(text);
+      if (entry.value) row.appendChild(h('b', null, entry.value));
+      if (entry.action) {
+        row.setAttribute('data-act', entry.action);
+        if (entry.id) row.setAttribute('data-id', entry.id);
+        row.style.cursor = 'pointer';
+      }
+      rows.appendChild(row);
+    });
+    wrap.appendChild(rows);
+  }
+
+  function newsBlock(moduleId, parent, item) {
+    if (!item.items || !item.items.length) return;
+    var wrap = section(parent, item.title);
+    var rows = h('div', 'rows');
+    item.items.slice(0, 6).forEach(function (entry) {
+      var row = h('div', 'row');
+      var text = h('div', 'row-text');
+      text.appendChild(h('b', null, entry.title || ''));
+      text.appendChild(h('span', null, (entry.source || '') + (entry.ago ? ' \u00b7 ' + entry.ago : '')));
+      row.appendChild(text);
+      row.setAttribute('data-act', entry.action || 'open');
+      if (entry.url) row.setAttribute('data-url', entry.url);
+      rows.appendChild(row);
+    });
+    wrap.appendChild(rows);
+  }
+
+  function controlsBlock(moduleId, parent, item) {
+    if (!item.items || !item.items.length) return;
+    var wrap = section(parent, item.title);
+    var grid = h('div', 'btns');
+    item.items.forEach(function (entry) {
+      var button = h('button', null, entry.label || entry.id);
+      button.type = 'button';
+      button.setAttribute('data-act', entry.id);
+      grid.appendChild(button);
+    });
+    wrap.appendChild(grid);
+  }
+
+  function togglesBlock(moduleId, parent, item) {
+    if (!item.items || !item.items.length) return;
+    var wrap = section(parent, item.title);
+    var chips = h('div', 'chips');
+    item.items.forEach(function (entry) {
+      var chip = h('button', 'chip' + (entry.on ? ' is-on' : ' is-off'), entry.label);
+      chip.type = 'button';
+      chip.setAttribute('data-act', item.action || 'toggle_endpoint');
+      chip.setAttribute('data-id', entry.id);
+      chips.appendChild(chip);
+    });
+    wrap.appendChild(chips);
+  }
+
+  function hoursBlock(parent, items) {
+    if (!items.length) return;
+    var wrap = section(parent, null);
+    var line = h('div', 'hours');
+    items.forEach(function (entry) {
+      var cell = h('div');
+      cell.appendChild(h('span', null, entry.label || entry.hour || ''));
+      cell.appendChild(h('b', null, entry.value || entry.temp || ''));
+      line.appendChild(cell);
+    });
+    wrap.appendChild(line);
+  }
+
+  function shortcutsBlock(moduleId, parent, item) {
+    if (!item.items || !item.items.length) return;
+    var wrap = section(parent, item.title);
+    var grid = h('div', 'btns');
+    item.items.forEach(function (entry) {
+      var button = h('button', null, entry.label || entry.title || '');
+      button.type = 'button';
+      button.setAttribute('data-act', 'launch');
+      button.setAttribute('data-id', entry.id);
+      grid.appendChild(button);
+    });
+    wrap.appendChild(grid);
+  }
+
   /* ------------------------------- chrome ----------------------------- */
 
   var toastTimer = 0;
@@ -397,23 +705,11 @@
     toastTimer = setTimeout(function () { el.toast.hidden = true; }, 2600);
   }
 
-  function setView(next) {
-    view = next === 'media' ? 'media' : 'system';
-    localStorage.setItem('dg_carthing_view', view);
-    document.body.setAttribute('data-view', view);
-    el.rail.setAttribute('data-view', view);
-    el.viewSystem.className = 'view' + (view === 'system' ? ' is-on' : '');
-    el.viewMedia.className = 'view' + (view === 'media' ? ' is-on' : '');
-    document.querySelectorAll('.rail-btn').forEach(function (button) {
-      button.classList.toggle('is-on', button.getAttribute('data-view') === view);
-    });
-  }
-
   function tickClock() {
     var now = new Date();
-    var h = now.getHours();
-    var m = now.getMinutes();
-    setText(el.clock, (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m);
+    var hh = now.getHours();
+    var mm = now.getMinutes();
+    setText(el.clock, (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm);
   }
 
   /* -------------------------------- boot ------------------------------ */
@@ -423,6 +719,8 @@
       rail: $('rail'),
       viewSystem: $('view-system'),
       viewMedia: $('view-media'),
+      viewOther: $('view-other'),
+      other: $('other-body'),
       conn: $('conn'),
       server: $('server'),
       clock: $('clock'),
@@ -450,17 +748,13 @@
       playIcon: $('m-play-icon'),
       vol: $('vol'),
       volVal: $('vol-val'),
+      volUp: $('vol-up'),
+      volDown: $('vol-down'),
       outputs: $('outputs'),
       toast: $('toast')
     };
 
-    document.querySelectorAll('.rail-btn').forEach(function (button) {
-      button.addEventListener('click', function () {
-        setView(button.getAttribute('data-view'));
-      });
-    });
-
-    document.querySelectorAll('.tbtn').forEach(function (button) {
+    Array.prototype.forEach.call(document.querySelectorAll('.tbtn'), function (button) {
       button.addEventListener('click', function () {
         act('media', button.getAttribute('data-action'));
       });
@@ -478,7 +772,45 @@
       }, 120);
     });
 
-    setView(view);
+    el.volUp.addEventListener('click', function () { act('media', 'volume_up'); });
+    el.volDown.addEventListener('click', function () { act('media', 'volume_down'); });
+
+    el.other.addEventListener('click', function (event) {
+      var target = event.target;
+      while (target && target !== el.other && !target.getAttribute('data-act')) {
+        target = target.parentNode;
+      }
+      if (!target || target === el.other) return;
+      var payload = {};
+      var id = target.getAttribute('data-id');
+      var url = target.getAttribute('data-url');
+      if (id) payload.id = id;
+      if (url) payload.url = url;
+      act(current, target.getAttribute('data-act'), payload);
+    });
+
+    document.addEventListener('keydown', function (event) {
+      var key = event.key;
+      if (key >= '1' && key <= '4') {
+        var pick = modules[parseInt(key, 10) - 1];
+        if (pick) { setView(pick); event.preventDefault(); }
+        return;
+      }
+      if (key === 'Escape' || key === 'Backspace') {
+        stepView(-1);
+        event.preventDefault();
+        return;
+      }
+      if (key === 'ArrowRight') { stepView(1); event.preventDefault(); return; }
+      if (key === 'ArrowLeft') { stepView(-1); event.preventDefault(); return; }
+      if (key === 'ArrowUp') { act('media', 'volume_up'); event.preventDefault(); return; }
+      if (key === 'ArrowDown') { act('media', 'volume_down'); event.preventDefault(); return; }
+      if (key === 'Enter' || key === ' ') {
+        if (current === 'media') act('media', 'play_pause');
+        event.preventDefault();
+      }
+    });
+
     tickClock();
     setInterval(tickClock, 20000);
     connect();
